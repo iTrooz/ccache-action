@@ -59574,7 +59574,7 @@ async function getUptime() {
 }
 async function printCcacheSize(ccacheVariant) {
     (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
-        if (line.startsWith("cache size")) {
+        if (line.toLowerCase().startsWith("cache size")) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(line);
         }
     });
@@ -59630,7 +59630,6 @@ async function run(earlyExit) {
             await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaned cache ! New cache size:");
             printCcacheSize(ccacheVariant);
-            await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} -s${verbosity}`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
         }
         else {

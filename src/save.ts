@@ -18,7 +18,7 @@ async function getUptime() : Promise<number> {
 
 async function printCcacheSize(ccacheVariant : string) {
   (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
-    if (line.startsWith("cache size")) {
+    if (line.toLowerCase().startsWith("cache size")) {
       core.info(line);
     }
   });
@@ -81,7 +81,6 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
       await exec.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
       core.info("Cleaned cache ! New cache size:")
       printCcacheSize(ccacheVariant);
-      await exec.exec(`${ccacheVariant} -s${verbosity}`);
       core.endGroup();
     } else {
       core.info("Cache cleaning not enabled, skipped")
