@@ -1,6 +1,20 @@
 import * as core from "@actions/core";
 import * as cache from "@actions/cache";
 import * as exec from "@actions/exec";
+import * as fs from 'fs';
+
+async function getUptime() : Promise<number> {
+  if (process.platform == "darwin") {
+    let output = await exec.getExecOutput("sysctl kern.boottime");
+    let uptimeStr = output.stdout.match(/sec = (\d+)/);
+    if (uptimeStr) return parseInt(uptimeStr[0]);
+    else throw Error(`Output ${output.stdout} didn't match regex`)
+    
+  }
+  const data = fs.readFileSync("/proc/uptime", 'utf8');
+  const uptime = parseInt(data.split(" ")[0]);
+  return uptime;
+}
 
 async function ccacheIsEmpty(ccacheVariant : string, ccacheKnowsVerbosityFlag : boolean) : Promise<boolean> {
   if (ccacheVariant === "ccache") {
@@ -44,6 +58,8 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
       return;
     }
 
+    const cleanCache = core.getState("cleanUnused") === "true";
+
     // Some versions of ccache do not support --verbose
     const ccacheKnowsVerbosityFlag = !!(await getExecBashOutput(`${ccacheVariant} --help`)).stdout.includes("--verbose");
 
@@ -55,6 +71,18 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
     if (core.getState("shouldSave") !== "true") {
       core.info("Not saving cache because 'save' is set to 'false'.");
       return;
+    }
+
+    if (cleanCache) {
+      core.startGroup(`${ccacheVariant} cleanUnused`);
+      core.info("Cleaning cache that hasn't been used during this job")
+      const uptime = await getUptime();
+      await exec.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
+      core.info("Cleaned cache ! New cache size (compare with stats before):")
+      await exec.exec(`${ccacheVariant} -s${verbosity}`);
+      core.endGroup();
+    } else {
+      core.info("Cache cleaning not enabled, skipped")
     }
 
     if (await ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag)) {
