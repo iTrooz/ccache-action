@@ -59553,9 +59553,25 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony import */ var _actions_cache__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(_actions_cache__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _actions_exec__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1514);
 /* harmony import */ var _actions_exec__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__nccwpck_require__.n(_actions_exec__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7147);
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__nccwpck_require__.n(fs__WEBPACK_IMPORTED_MODULE_3__);
 
 
 
+
+async function getUptime() {
+    if (process.platform == "darwin") {
+        let output = await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.getExecOutput("sysctl kern.boottime");
+        let uptimeStr = output.stdout.match(/sec = (\d+)/);
+        if (uptimeStr)
+            return parseInt(uptimeStr[0]);
+        else
+            throw Error(`Output ${output.stdout} didn't match regex`);
+    }
+    const data = fs__WEBPACK_IMPORTED_MODULE_3__.readFileSync("/proc/uptime", 'utf8');
+    const uptime = parseInt(data.split(" ")[0]);
+    return uptime;
+}
 async function ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag) {
     if (ccacheVariant === "ccache") {
         if (ccacheKnowsVerbosityFlag) {
@@ -59593,6 +59609,7 @@ async function run(earlyExit) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.notice("ccache setup failed, skipping saving.");
             return;
         }
+        const cleanCache = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getState("cleanUnused") === "true";
         // Some versions of ccache do not support --verbose
         const ccacheKnowsVerbosityFlag = !!(await getExecBashOutput(`${ccacheVariant} --help`)).stdout.includes("--verbose");
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} stats`);
@@ -59602,6 +59619,18 @@ async function run(earlyExit) {
         if (_actions_core__WEBPACK_IMPORTED_MODULE_0__.getState("shouldSave") !== "true") {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Not saving cache because 'save' is set to 'false'.");
             return;
+        }
+        if (cleanCache) {
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} cleanUnused`);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaning cache that hasn't been used during this job");
+            const uptime = await getUptime();
+            await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaned cache ! New cache size (compare with stats before):");
+            await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} -s${verbosity}`);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
+        }
+        else {
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cache cleaning not enabled, skipped");
         }
         if (await ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag)) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Not saving cache because no objects are cached.");
