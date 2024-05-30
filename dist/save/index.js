@@ -59628,11 +59628,11 @@ async function run(earlyExit) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} cleanUnused`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaning cache that hasn't been used during this job");
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Size before cleaning:");
-            printCcacheSize(ccacheVariant);
+            await printCcacheSize(ccacheVariant);
             const uptime = await getUptime();
             await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaned cache ! New cache size:");
-            printCcacheSize(ccacheVariant);
+            await printCcacheSize(ccacheVariant);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
         }
         else {

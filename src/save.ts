@@ -79,11 +79,11 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
       core.startGroup(`${ccacheVariant} cleanUnused`);
       core.info("Cleaning cache that hasn't been used during this job");
       core.info("Size before cleaning:");
-      printCcacheSize(ccacheVariant);
+      await printCcacheSize(ccacheVariant);
       const uptime = await getUptime();
       await exec.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
       core.info("Cleaned cache ! New cache size:")
-      printCcacheSize(ccacheVariant);
+      await printCcacheSize(ccacheVariant);
       core.endGroup();
     } else {
       core.info("Cache cleaning not enabled, skipped")
