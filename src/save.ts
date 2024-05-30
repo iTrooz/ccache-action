@@ -16,6 +16,13 @@ async function getUptime() : Promise<number> {
   return uptime;
 }
 
+async function printCcacheSize(ccacheVariant : string) {
+  (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
+    if (line.startsWith("cache size")) {
+      core.info(line);
+    }
+  });
+}
 async function ccacheIsEmpty(ccacheVariant : string, ccacheKnowsVerbosityFlag : boolean) : Promise<boolean> {
   if (ccacheVariant === "ccache") {
     if (ccacheKnowsVerbosityFlag) {
@@ -67,10 +74,13 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
     // we should clean cache before showing stats, so that stats can provide a global view of the cache state
     if (cleanCache) {
       core.startGroup(`${ccacheVariant} cleanUnused`);
-      core.info("Cleaning cache that hasn't been used during this job")
+      core.info("Cleaning cache that hasn't been used during this job");
+      core.info("Size before cleaning:");
+      printCcacheSize(ccacheVariant);
       const uptime = await getUptime();
       await exec.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
-      core.info("Cleaned cache ! New cache size (compare with stats before):")
+      core.info("Cleaned cache ! New cache size:")
+      printCcacheSize(ccacheVariant);
       await exec.exec(`${ccacheVariant} -s${verbosity}`);
       core.endGroup();
     } else {
