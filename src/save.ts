@@ -62,17 +62,9 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
 
     // Some versions of ccache do not support --verbose
     const ccacheKnowsVerbosityFlag = !!(await getExecBashOutput(`${ccacheVariant} --help`)).stdout.includes("--verbose");
-
-    core.startGroup(`${ccacheVariant} stats`);
     const verbosity = ccacheKnowsVerbosityFlag ? await getVerbosity(core.getInput("verbose")) : '';
-    await exec.exec(`${ccacheVariant} -s${verbosity}`);
-    core.endGroup();
-    
-    if (core.getState("shouldSave") !== "true") {
-      core.info("Not saving cache because 'save' is set to 'false'.");
-      return;
-    }
 
+    // we should clean cache before showing stats, so that stats can provide a global view of the cache state
     if (cleanCache) {
       core.startGroup(`${ccacheVariant} cleanUnused`);
       core.info("Cleaning cache that hasn't been used during this job")
@@ -83,6 +75,15 @@ async function run(earlyExit : boolean | undefined) : Promise<void> {
       core.endGroup();
     } else {
       core.info("Cache cleaning not enabled, skipped")
+    }
+
+    core.startGroup(`${ccacheVariant} stats`);
+    await exec.exec(`${ccacheVariant} -s${verbosity}`);
+    core.endGroup();
+    
+    if (core.getState("shouldSave") !== "true") {
+      core.info("Not saving cache because 'save' is set to 'false'.");
+      return;
     }
 
     if (await ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag)) {
