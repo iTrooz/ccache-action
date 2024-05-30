@@ -18,7 +18,7 @@ async function getUptime() : Promise<number> {
 
 async function printCcacheSize(ccacheVariant : string) {
   (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
-    core.info(line);
+    core.info("AA "+line);
     if (line.toLowerCase().includes("cache size")) {
       core.info(line);
     }
