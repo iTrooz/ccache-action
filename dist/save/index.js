@@ -59572,6 +59572,13 @@ async function getUptime() {
     const uptime = parseInt(data.split(" ")[0]);
     return uptime;
 }
+async function printCcacheSize(ccacheVariant) {
+    (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
+        if (line.startsWith("cache size")) {
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(line);
+        }
+    });
+}
 async function ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag) {
     if (ccacheVariant === "ccache") {
         if (ccacheKnowsVerbosityFlag) {
@@ -59612,25 +59619,29 @@ async function run(earlyExit) {
         const cleanCache = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getState("cleanUnused") === "true";
         // Some versions of ccache do not support --verbose
         const ccacheKnowsVerbosityFlag = !!(await getExecBashOutput(`${ccacheVariant} --help`)).stdout.includes("--verbose");
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} stats`);
         const verbosity = ccacheKnowsVerbosityFlag ? await getVerbosity(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("verbose")) : '';
-        await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} -s${verbosity}`);
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
-        if (_actions_core__WEBPACK_IMPORTED_MODULE_0__.getState("shouldSave") !== "true") {
-            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Not saving cache because 'save' is set to 'false'.");
-            return;
-        }
+        // we should clean cache before showing stats, so that stats can provide a global view of the cache state
         if (cleanCache) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} cleanUnused`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaning cache that hasn't been used during this job");
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Size before cleaning:");
+            printCcacheSize(ccacheVariant);
             const uptime = await getUptime();
             await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} --evict-older-than ${uptime}s`);
-            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaned cache ! New cache size (compare with stats before):");
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cleaned cache ! New cache size:");
+            printCcacheSize(ccacheVariant);
             await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} -s${verbosity}`);
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
         }
         else {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Cache cleaning not enabled, skipped");
+        }
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.startGroup(`${ccacheVariant} stats`);
+        await _actions_exec__WEBPACK_IMPORTED_MODULE_2__.exec(`${ccacheVariant} -s${verbosity}`);
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.endGroup();
+        if (_actions_core__WEBPACK_IMPORTED_MODULE_0__.getState("shouldSave") !== "true") {
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Not saving cache because 'save' is set to 'false'.");
+            return;
         }
         if (await ccacheIsEmpty(ccacheVariant, ccacheKnowsVerbosityFlag)) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info("Not saving cache because no objects are cached.");
