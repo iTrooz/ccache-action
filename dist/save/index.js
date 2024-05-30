@@ -59574,7 +59574,7 @@ async function getUptime() {
 }
 async function printCcacheSize(ccacheVariant) {
     (await getExecBashOutput(`${ccacheVariant} -s`)).stdout.split("\n").forEach((line) => {
-        if (line.toLowerCase().startsWith("cache size")) {
+        if (line.toLowerCase().includes("cache size")) {
             _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(line);
         }
     });
